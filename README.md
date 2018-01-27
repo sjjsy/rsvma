@@ -12,9 +12,22 @@ eg. the SDC Platinum M&A data (2005-2015).
 
 The research is conducted between January and April 2018.
 
+## Files and folders
+
+The following table describes the major files and folders in the repo and
+whether they are included in the repo or are expected to be added to each local
+setup manually.
+
+| Path                   | Purpose                                     | Included  |
+| ---------------------- | ------------------------------------------- | --------- |
+| README.md              | This file (general documentation)           | Yes       |
+| src/                   | Folder for all source code                  | Yes       |
+| data/                  | Folder for all datasets                     | No        |
+| out/                   | Folder for all outputs                      | Yes       |
+
 ## Contributors
 
-Johanna Tavia
 Samuel Marisa
+Johanna Tavia
 Rick Deist
 (Uki Eiri)
