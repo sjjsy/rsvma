@@ -3,10 +3,13 @@
 #
 ### Some preprocessing code
 #
-# Essentially rewrites the data without excess whitespace and misplaced line
-# endings.
+# Essentially rewrites the data into another file without excess whitespace and
+# misplaced line endings.
+#
+# Usage: python3 src/pp.py pp ma_05-15.csv
 
 import sys, csv, re, errno
+
 
 cmd = sys.argv[1]
 pf = sys.argv[2]
