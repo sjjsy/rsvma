@@ -27,7 +27,7 @@ setup manually.
 
 ## Contributors
 
-Samuel Marisa
-Johanna Tavia
-Rick Deist
-(Uki Eiri)
+* Samuel Marisa
+* Johanna Tavia
+* Rick Deist
+* (Uki Eiri)
