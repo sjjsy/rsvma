@@ -25,6 +25,7 @@ setup manually.
 | data/                  | Folder for all datasets                     | No        |
 | out/                   | Folder for all outputs                      | Yes       |
 | doc/                   | Folder for documentation and reports        | Yes       |
+| doc/plan.pdf           | Research plan / report draft                | Yes       |
 
 ## Contributors
 
