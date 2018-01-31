@@ -24,10 +24,11 @@ setup manually.
 | src/                   | Folder for all source code                  | Yes       |
 | data/                  | Folder for all datasets                     | No        |
 | out/                   | Folder for all outputs                      | Yes       |
+| doc/                   | Folder for documentation and reports        | Yes       |
 
 ## Contributors
 
 * Samuel Marisa
 * Johanna Tavia
 * Rick Deist
-* (Uki Eiri)
+* Uki Eiri (alias)

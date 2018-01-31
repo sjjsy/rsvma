@@ -25,7 +25,7 @@ if cmd == 'pp':
           cell = re.sub('\n+', ' ', cell)
           cell = re.sub('\s\s+', ' ', cell).strip()
           cells.append(cell)
-        if len(cells) > 56:
+        if len(cells) >= 56:
           wrtr.writerow(cells[:56])
           del cells[:56]
 elif cmd == 'check':
