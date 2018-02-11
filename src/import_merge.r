@@ -17,6 +17,8 @@ rsvma.main <- function()
 	master_dataset <- rsvma.load_targets()
 	master_dataset <- rsvma.load_fundamentals(master_dataset)
 	master_dataset <- rsvma.load_madata(master_dataset)
+	master_dataset <- rsvma.load_instdata(master_dataset)
+	cat("Done.\n")
 	master_dataset
 }
 

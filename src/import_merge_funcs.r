@@ -32,7 +32,7 @@ rsvma.load_targets <- function()
 	"Output .csv, compression type .zip, date format YYMMDDn8",
 	"Filename: ../data/compustat_index_constituents.csv\n", sep = '\n' )
 	cat(msg)
-	readline( prompt="Execute the WRDS query above then press enter when ready to continue... ")
+	readline( prompt="Execute the WRDS query above and save the file as specified then press enter when ready to continue... ")
 	selected_firms <- read.csv("../data/compustat_index_constituents.csv")
 
 	# Convert dates.
@@ -54,8 +54,9 @@ rsvma.load_targets <- function()
 	names(selected_firms)[names(selected_firms) == 'co_sic'] <- 'SIC'
 	names(selected_firms)[names(selected_firms) == 'co_naics'] <- 'NAICS'
 
-	# Dump the selected GVKEY identifiers to a text file for use with the WRDS query system.
-	write(selected_firms[['gvkey']], file = '../data/selected_dump.txt', ncolumns = 1)
+	# Dump the selected identifiers to a text file for use with the WRDS query system.
+	write(as.character(selected_firms[['gvkey']]), file = '../data/selected_dump_gvkey.txt', ncolumns = 1)
+	write(as.character(selected_firms[['CUSIP']]), file = '../data/selected_dump_cusip.txt', ncolumns = 1)
 	
 	selected_firms
 }
@@ -68,17 +69,16 @@ rsvma.load_fundamentals <- function(dataset)
 	msg <- paste("WRDS: Compustat Daily Updates - Fundamentals Quarterly",
 	"https://wrds-web.wharton.upenn.edu/wrds/ds/compd/fundq/index.cfm",
 	"Data Date - Date range 2005-01 - 2015-12",
-	"GVKEY, upload a plain text file - ../data/selected_dump.txt (automatically created by previous step)",
+	"GVKEY, upload a plain text file - ../data/selected_dump_gvkey.txt (automatically created by previous step)",
 	"Selected: MKVALT, NIQ (Net Income), ATQ (Total Assets)",
 	"Output .csv, compression type .zip, date format YYMMDDn8",
 	"Filename: ../data/compustat_selected_fundamentals.csv\n", sep = '\n' )
 	cat(msg)
-	readline( prompt="Execute the WRDS query above then press enter when ready to continue... ")
+	readline( prompt="Execute the WRDS query above and save the file as specified then press enter when ready to continue... ")
 	selected_firms_fundamentals <- read.csv("../data/compustat_selected_fundamentals.csv")
 
 	# Join the two tables.
 	dataset <- merge(dataset, selected_firms_fundamentals, by = "gvkey")
-	rm(selected_firms_fundamentals)
 
 	# Compute ROA as Net Income / Total Assets.
 	dataset$roa <- dataset$niq / dataset$atq
@@ -131,9 +131,8 @@ rsvma.load_madata <- function(dataset)
 	ma_data_agg_count <- subset(ma_data_agg_count, select = c(CUSIPShort,Quarter,Acquiror.Ultimate.Parent.CUSIP))
 	names(ma_data_agg_count)[names(ma_data_agg_count) == 'Acquiror.Ultimate.Parent.CUSIP'] <- 'AcquisitionCount'
 
-	# Join back to the main table and remove this temporary aggregation.
+	# Join back to the main table.
 	dataset <- merge(dataset, ma_data_agg_count, by = c("CUSIPShort","Quarter") )
-	rm(ma_data_agg_count)
 
 	# Aggregate total value by ultimate parent CUSIP and quarter announced.
 	# NOTE: Many deals are missing the total value!
@@ -145,9 +144,61 @@ rsvma.load_madata <- function(dataset)
 	# Cleanup columns.
 	names(ma_data_agg_sum)[names(ma_data_agg_sum) == 'x'] <- 'AcquisitionTotalValue'
 
-	# Join back to the main table and remove this temporary aggregation.
+	# Join back to the main table.
 	dataset <- merge(dataset, ma_data_agg_sum, by = c("CUSIPShort","Quarter") )
-	rm(ma_data_agg_sum)
 	
 	dataset
 }
+
+##########################################################
+# Institutional Shareholder Data (Thomson Reuters 13F & Brian Bushee classifications)
+##########################################################
+rsvma.load_instdata<- function(dataset)
+{
+	msg <- paste("WRDS: Thomson Reuters Institutional (13f) Holdings - s34 Master File",
+		"https://wrds-web.wharton.upenn.edu/wrds/ds/tfn/sp34/index.cfm",
+		"Data Date - Date range 2005-01 - 2015-12",
+		"CUSIP, upload a plain text file - ../data/selected_dump_cusip.txt (automatically created by first step)",
+		"Selected: MGRNAME TYPECODE FDATE RDATE CUSIP SHARES NO SHARED SOLE CHANGE PRC SHROUT1",
+		"Output .csv, compression type .zip, date format YYMMDDn8",
+		"Filename: ../data/tr_13f_holdings.csv\n", sep = '\n' )
+	cat(msg)
+	readline( prompt="Execute the WRDS query above and save the file as specified then press enter when ready to continue... ")
+	selected_firms_13f <- read.csv("../data/tr_13f_holdings.csv")
+	
+	cat("Ensure that Bushee's classification data is in place\nhttp://acct.wharton.upenn.edu/faculty/bushee/IIclass.html\nFilename: ../data/bushee_classifications.csv\n")
+	readline( prompt="Press enter when ready to continue... ")
+	bushee_classifications <- read.table("../data/bushee_classifications.csv", na.strings=".")
+	colnames(bushee_classifications) <- c('mgrno','mgrno_ver','permkey','year','type','dedclass','dedclass_perm','invstyle','invstyle_perm','growstyle','growstyle_perm','taxsens','taxsens_ext')
+	
+	# Filter to dedicated shareholders between 2005 and 2015.
+	# LIMITATION: If a shareholder is not present in Bushee's classification data then we do not consider it, regardless of its actual behavior.
+	bushee_classifications <- bushee_classifications[(!is.na(bushee_classifications$dedclass) | !is.na(bushee_classifications$dedclass_perm)) & (bushee_classifications$dedclass_perm == "DED" | (is.na(bushee_classifications$dedclass_perm) & bushee_classifications$dedclass == "DED")),]
+	bushee_classifications <- bushee_classifications[bushee_classifications$year >= 2005 & bushee_classifications$year <= 2015,]
+	
+	# Filter the 13F data to include only the previously specified shareholders from Bushee's data.
+	selected_firms_13f <- selected_firms_13f[selected_firms_13f$mgrno %in% bushee_classifications$mgrno,]
+	
+	# Format quarterly dates to match the master dataset.
+	selected_firms_13f$rdate <- format(as.yearqtr(as.character(selected_firms_13f$rdate), "%Y%m%d"), "%YQ%q")
+	
+	# Aggregate the total number of shares and the average number of shares outstanding by CUSIP and quarter.
+	selected_firms_13f$shares <- as.numeric(as.character(selected_firms_13f$shares))
+	selected_firms_13f$CUSIPShort <- substr(as.character(selected_firms_13f$CUSIP), 0, 6)
+	selected_firms_13f_agg_sumshares <- aggregate(selected_firms_13f$shares, list(CUSIPShort=selected_firms_13f$CUSIPShort,Quarter=selected_firms_13f$rdate), sum, na.rm=TRUE)
+	names(selected_firms_13f_agg_sumshares)[names(selected_firms_13f_agg_sumshares) == 'x'] <- 'TotalIH'
+	selected_firms_13f_agg_avgshrout <- aggregate(1000000*selected_firms_13f$shrout1, list(CUSIPShort=selected_firms_13f$CUSIPShort,Quarter=selected_firms_13f$rdate), mean, na.rm=TRUE)
+	names(selected_firms_13f_agg_avgshrout)[names(selected_firms_13f_agg_avgshrout) == 'x'] <- 'AvgShrOut'
+	
+	# Calculate percentage of institutional holdings (PIH).
+	selected_firms_13f_agg <- merge(selected_firms_13f_agg_sumshares,selected_firms_13f_agg_avgshrout, by = c("CUSIPShort","Quarter") )
+	selected_firms_13f_agg$PIH <- 100 * (selected_firms_13f_agg$TotalIH / selected_firms_13f_agg$AvgShrOut)
+	selected_firms_13f_agg <- subset(selected_firms_13f_agg, select = c(CUSIPShort,Quarter,PIH))
+	
+	# Join back to the main table.
+	dataset <- merge(dataset, selected_firms_13f_agg, by = c("CUSIPShort","Quarter") )
+	
+	dataset
+}
+	
+	
