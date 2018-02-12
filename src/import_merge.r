@@ -18,6 +18,11 @@ rsvma.main <- function()
 	master_dataset <- rsvma.load_fundamentals(master_dataset)
 	master_dataset <- rsvma.load_madata(master_dataset)
 	master_dataset <- rsvma.load_instdata(master_dataset)
+	
+	master_dataset$AcquisitionCount <- na.fill(master_dataset$AcquisitionCount, 0)
+	cat("Writing to ../data/master_dataset.csv\n")
+	write.csv(master_dataset, file = "../data/master_dataset.csv")
+	
 	cat("Done.\n")
 	master_dataset
 }

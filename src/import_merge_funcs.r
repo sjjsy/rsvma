@@ -132,20 +132,20 @@ rsvma.load_madata <- function(dataset)
 	names(ma_data_agg_count)[names(ma_data_agg_count) == 'Acquiror.Ultimate.Parent.CUSIP'] <- 'AcquisitionCount'
 
 	# Join back to the main table.
-	dataset <- merge(dataset, ma_data_agg_count, by = c("CUSIPShort","Quarter") )
+	dataset <- merge( x = dataset, y = ma_data_agg_count, by = c("CUSIPShort","Quarter"), all.x = TRUE )
 
 	# Aggregate total value by ultimate parent CUSIP and quarter announced.
 	# NOTE: Many deals are missing the total value!
 	ma_data_agg_sum <- subset(ma_data, select = c(Acquiror.Ultimate.Parent.CUSIP,Date.Announced,Value.of.Transaction...mil.))
 	names(ma_data_agg_sum)[names(ma_data_agg_sum) == 'Value.of.Transaction...mil.'] <- 'AcquisitionTotalValue'
-	ma_data_agg_sum$AcquisitionTotalValue <- as.numeric(as.character(ma_data_agg_sum$AcquisitionTotalValue))
+	ma_data_agg_sum$AcquisitionTotalValue <- suppressWarnings(as.numeric(as.character(ma_data_agg_sum$AcquisitionTotalValue)))
 	ma_data_agg_sum <- aggregate(ma_data_agg_sum$AcquisitionTotalValue, list(CUSIPShort=ma_data_agg_sum$Acquiror.Ultimate.Parent.CUSIP,Quarter=ma_data_agg_sum$Date.Announced), sum, na.rm=TRUE)
 
 	# Cleanup columns.
 	names(ma_data_agg_sum)[names(ma_data_agg_sum) == 'x'] <- 'AcquisitionTotalValue'
 
 	# Join back to the main table.
-	dataset <- merge(dataset, ma_data_agg_sum, by = c("CUSIPShort","Quarter") )
+	dataset <- merge( x = dataset, y = ma_data_agg_sum, by = c("CUSIPShort","Quarter"), all.x = TRUE )
 	
 	dataset
 }
@@ -184,21 +184,20 @@ rsvma.load_instdata<- function(dataset)
 	
 	# Aggregate the total number of shares and the average number of shares outstanding by CUSIP and quarter.
 	selected_firms_13f$shares <- as.numeric(as.character(selected_firms_13f$shares))
-	selected_firms_13f$CUSIPShort <- substr(as.character(selected_firms_13f$CUSIP), 0, 6)
+	selected_firms_13f$CUSIPShort <- substr(as.character(selected_firms_13f$cusip), 0, 6)
 	selected_firms_13f_agg_sumshares <- aggregate(selected_firms_13f$shares, list(CUSIPShort=selected_firms_13f$CUSIPShort,Quarter=selected_firms_13f$rdate), sum, na.rm=TRUE)
 	names(selected_firms_13f_agg_sumshares)[names(selected_firms_13f_agg_sumshares) == 'x'] <- 'TotalIH'
 	selected_firms_13f_agg_avgshrout <- aggregate(1000000*selected_firms_13f$shrout1, list(CUSIPShort=selected_firms_13f$CUSIPShort,Quarter=selected_firms_13f$rdate), mean, na.rm=TRUE)
 	names(selected_firms_13f_agg_avgshrout)[names(selected_firms_13f_agg_avgshrout) == 'x'] <- 'AvgShrOut'
 	
 	# Calculate percentage of institutional holdings (PIH).
-	selected_firms_13f_agg <- merge(selected_firms_13f_agg_sumshares,selected_firms_13f_agg_avgshrout, by = c("CUSIPShort","Quarter") )
+	selected_firms_13f_agg <- merge( selected_firms_13f_agg_sumshares,selected_firms_13f_agg_avgshrout, by = c("CUSIPShort","Quarter") )
 	selected_firms_13f_agg$PIH <- 100 * (selected_firms_13f_agg$TotalIH / selected_firms_13f_agg$AvgShrOut)
 	selected_firms_13f_agg <- subset(selected_firms_13f_agg, select = c(CUSIPShort,Quarter,PIH))
 	
 	# Join back to the main table.
-	dataset <- merge(dataset, selected_firms_13f_agg, by = c("CUSIPShort","Quarter") )
+	dataset <- merge( x = dataset, y = selected_firms_13f_agg, by = c("CUSIPShort","Quarter"), all.x = TRUE )
 	
 	dataset
 }
-	
 	
