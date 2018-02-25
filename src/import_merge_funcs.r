@@ -20,6 +20,13 @@ rsvma.setup <- function()
 		install.packages("zoo")
 		library(zoo)
 	}
+
+	# Install & load dependencies.
+	if( !require(dplyr) )
+	{
+		install.packages("dplyr")
+		library(dplyr)
+	}
 }
 
 ##########################################################
@@ -199,6 +206,9 @@ rsvma.load_instdata<- function(dataset)
 	selected_firms_13f_agg <- merge( selected_firms_13f_agg_sumshares,selected_firms_13f_agg_avgshrout, by = c("CUSIPShort","Quarter") )
 	selected_firms_13f_agg$PIH <- 100 * (selected_firms_13f_agg$TotalIH / selected_firms_13f_agg$AvgShrOut)
 	selected_firms_13f_agg <- subset(selected_firms_13f_agg, select = c(CUSIPShort,Quarter,PIH))
+	
+	# Add a 4 period lagged column of the PIH as well.
+	selected_firms_13f_agg <- selected_firms_13f_agg %>% group_by(CUSIPShort) %>% mutate(PIH_lag4 = lag(PIH,4,order_by = Quarter))
 	
 	# Join back to the main table.
 	dataset <- merge( x = dataset, y = selected_firms_13f_agg, by = c("CUSIPShort","Quarter"), all.x = TRUE )
