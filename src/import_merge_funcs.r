@@ -5,6 +5,8 @@
 # This script includes all of the steps required to go from initial source data to one final
 # R data frame which contains the relevant rows and columns needed for analysis.
 #
+# If you want to inspect one of the intermediate tables, setting a breakpoint is the easiest way.
+#
 ##########################################################
 
 ##########################################################
@@ -70,7 +72,7 @@ rsvma.load_fundamentals <- function(dataset)
 	"https://wrds-web.wharton.upenn.edu/wrds/ds/compd/fundq/index.cfm",
 	"Data Date - Date range 2005-01 - 2015-12",
 	"GVKEY, upload a plain text file - ../data/selected_dump_gvkey.txt (automatically created by previous step)",
-	"Selected: MKVALT, NIQ (Net Income), ATQ (Total Assets)",
+	"Selected: CSHOQ (Common Shares Outstanding), PRCCQ (Price Close - Quarter), NIQ (Net Income), ATQ (Total Assets)",
 	"Output .csv, compression type .zip, date format YYMMDDn8",
 	"Filename: ../data/compustat_selected_fundamentals.csv\n", sep = '\n' )
 	cat(msg)
@@ -79,16 +81,19 @@ rsvma.load_fundamentals <- function(dataset)
 
 	# Join the two tables.
 	dataset <- merge(dataset, selected_firms_fundamentals, by = "gvkey")
-
+	
+	# Compute market value as price at end of quarter times shares outstanding (units $M).
+	# I have verified that this number is exactly the same as Compustat's MKTVALQ in 
+	# all cases where both are available, and CSHOQ & PRCCQ are more often available.
+  dataset$MarketValue <- dataset$cshoq * dataset$prccq
+	
 	# Compute ROA as Net Income / Total Assets.
-	dataset$roa <- dataset$niq / dataset$atq
+	# WRDS Ref: https://www.wiwi.uni-muenster.de/uf/sites/uf/files/2017_10_12_wrds_data_items.pdf
+	dataset$ROA <- dataset$niq / dataset$atq
 
 	# Rearrange columns and drop unnecessary ones.
-	dataset <- subset(dataset, select = c(gvkey,CUSIP,CIK,Ticker,Name,SIC,NAICS,datacqtr,mkvaltq,roa))
-
+	dataset <- subset(dataset, select = c(gvkey,CUSIP,CIK,Ticker,Name,SIC,NAICS,datacqtr,MarketValue,ROA))
 	names(dataset)[names(dataset) == 'datacqtr'] <- 'Quarter'
-	names(dataset)[names(dataset) == 'mkvaltq'] <- 'MarketValue'
-	names(dataset)[names(dataset) == 'roa'] <- 'ROA'
 
 	# Create a temporary column in the main table with the truncated CUSIP identifier that we will have to join on.
 	dataset$CUSIPShort <- substr(dataset$CUSIP, 0, 6)
