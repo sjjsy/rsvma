@@ -85,7 +85,7 @@ rsvma.load_fundamentals <- function(dataset)
 	# Compute market value as price at end of quarter times shares outstanding (units $M).
 	# I have verified that this number is exactly the same as Compustat's MKTVALQ in 
 	# all cases where both are available, and CSHOQ & PRCCQ are more often available.
-  dataset$MarketValue <- dataset$cshoq * dataset$prccq
+	dataset$MarketValue <- dataset$cshoq * dataset$prccq
 	
 	# Compute ROA as Net Income / Total Assets.
 	# WRDS Ref: https://www.wiwi.uni-muenster.de/uf/sites/uf/files/2017_10_12_wrds_data_items.pdf
