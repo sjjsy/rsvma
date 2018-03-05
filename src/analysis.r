@@ -1,4 +1,8 @@
-#### Exploratory data analysis
+#### Data analysis
+
+# This file includes all the quantitative analysis that was done in relation
+# to the research report. Other scripts were used to produce the master
+# dataset required by this script.
 
 ### Read the data
 

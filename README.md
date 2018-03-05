@@ -22,10 +22,13 @@ setup manually.
 | ---------------------- | ------------------------------------------- | --------- |
 | README.md              | This file (general documentation)           | Yes       |
 | src/                   | Folder for all source code                  | Yes       |
+| src/import_merge.r     | Main data processing code                   | Yes       |
+| src/analysis.r         | Main analysis source code                   | Yes       |
 | data/                  | Folder for all datasets                     | No        |
 | out/                   | Folder for all outputs                      | Yes       |
 | doc/                   | Folder for documentation and reports        | Yes       |
 | doc/plan.pdf           | Research plan / report draft                | Yes       |
+| doc/draft.pdf          | Research report draft                       | Yes       |
 
 ## Contributors
 
