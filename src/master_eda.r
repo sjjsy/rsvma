@@ -34,21 +34,25 @@ df$SIC <- factor(df$SIC)
 df$PIH <- df$PIH / 100
 df$PIH_lag4 <- df$PIH_lag4 / 100
 
+# Generate some aggregating categorical variables out of numerical variables
+df$PIH_lag4c <- cut(df$PIH_lag4, c(0.00,0.02,0.05,0.10,0.20,1.00))
+df$MarketValueC <- cut(df$MarketValue, c(0,10000,50000,100000,200000,100000000))
+
 # Inspect the distribution of some variables
 par(mfrow=c(2,2))
-hist(df$MarketValue, pch=1)
-hist(df$ROA, pch=2)
-hist(df$PIH, pch=3)
-hist(df$AcquisitionCount, pch=4)
+hist(df$MarketValue, pch=1, main="Histogram of market value", xlab="Market value (MUSD)")
+hist(df$ROA, pch=2, main="Histogram of return on assets", xlab="ROA")
+hist(df$PIH, pch=3, main="Histogram of PIH", xlab="PIH")
+hist(df$AcquisitionCount, pch=4, main="Histogram of acquisition count", xlab="Acquisition count")
 par(mfrow=c(1,1))
 
 # Log-transform skewed variables -- NOT APPLIED
-df$MarketValue <- log(df$MarketValue)
-df$PIH <- log(df$PIH)
-df$PIH_lag4 <- log(df$PIH_lag4)
+#df$MarketValue <- log(df$MarketValue)
+#df$PIH <- log(df$PIH)
+#df$PIH_lag4 <- log(df$PIH_lag4)
 
 # Reorganize columns and eliminate unnecessary columns
-df <- df[c("X", "SIC3", "Name", "Year", "MarketValue", "ROA", "PIH_lag4", "AcquisitionCount")]
+df <- df[c("X", "SIC3", "Name", "Year", "MarketValue", "MarketValueC", "ROA", "PIH_lag4", "PIH_lag4c", "AcquisitionCount")]
 
 # Inspect
 View(df)
@@ -71,8 +75,18 @@ corrgram(df[,4:8])
 # Compute the correlations between all numerical variables
 cor(df[,4:8], use="complete.obs", method="pearson")
 
+# Plot acquisition count vs year
+boxplot(AcquisitionCount ~ Year, data=df, main="Acquisition activity over time", xlab="Year", ylab="Acquisition count per firm per quarter") 
+
+# Plot acquisition count vs market value
+boxplot(AcquisitionCount ~ MarketValueC, data=df,
+        main="Acquisition activity by firm size", xlab="Market value",
+        ylab="Acquisition count per firm per quarter",
+        names=c("<1B$","1-50B$","50-100B$","100-200B$", ">200B$"))
+
 # Plot PIH vs acquisition count 
-plot(df$PIH_lag4, df$AcquisitionCount, xlab="PIH of the preceding year", ylab="Number of acquisitions this year")
+boxplot(AcquisitionCount ~ PIH_lag4c, data=df, main="Acquisition activity by PIH", xlab="PIH four quarters ago", ylab="Acquisition count this quarter")
+plot(df$PIH_lag4, df$AcquisitionCount, xlab="PIH four quarters ago", ylab="Number of acquisitions this quarter")
 
 # Compute the correlation between PIH and acquisition count 
 cor.test(df$PIH_lag4, df$AcquisitionCount, use="complete.obs", method="pearson")
@@ -84,7 +98,7 @@ row.names(stats) <- c("Year", "MarketValue", "ROA", "PIH_lag4", "AcquisitionCoun
 colnames(stats) <- c("Min", "Max", "Mean", "SD")
 mcor <- cor(df[4:8], use="complete.obs", method="pearson")
 stats <- cbind(stats, mcor)
-write.csv(stats, file="../out/statsC.csv")
+write.csv(stats, file="../out/stats1c.csv")
 
 ### Form and analyze different linear models
 
@@ -106,7 +120,10 @@ write.csv(lm2r$coefficients[,c(1,2,4)], file="../out/lm2c.csv")
 ### Analyze the relative importance of each variable
 
 library(relaimpo)
-calc.relimp(lm2, type=c("lmg"), rela=TRUE)
+ri <- calc.relimp(lm2, type=c("lmg"), rela=TRUE)
+
+# Plot a pie chart
+pie(ri$lmg, col=rainbow(length(ri$lmg)), main="The relative importance of the variables") 
 
 ### Analyze within a specific industry
 
