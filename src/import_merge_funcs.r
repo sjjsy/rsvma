@@ -79,7 +79,8 @@ rsvma.load_fundamentals <- function(dataset)
 	"https://wrds-web.wharton.upenn.edu/wrds/ds/compd/fundq/index.cfm",
 	"Data Date - Date range 2005-01 - 2015-12",
 	"GVKEY, upload a plain text file - ../data/selected_dump_gvkey.txt (automatically created by previous step)",
-	"Selected: CSHOQ (Common Shares Outstanding), PRCCQ (Price Close - Quarter), NIQ (Net Income), ATQ (Total Assets)",
+	"Selected: CSHOQ (Common Shares Outstanding), PRCCQ (Price Close - Quarter), NIQ (Net Income), ATQ (Total Assets),",
+  "          XRDQ (R&D Expense), REVTQ (Total Revenue)",
 	"Output .csv, compression type .zip, date format YYMMDDn8",
 	"Filename: ../data/compustat_selected_fundamentals.csv\n", sep = '\n' )
 	cat(msg)
@@ -97,9 +98,14 @@ rsvma.load_fundamentals <- function(dataset)
 	# Compute ROA as Net Income / Total Assets.
 	# WRDS Ref: https://www.wiwi.uni-muenster.de/uf/sites/uf/files/2017_10_12_wrds_data_items.pdf
 	dataset$ROA <- dataset$niq / dataset$atq
+	
+	# Compute R&D intensity as R&D Expense / Total Revenue.
+	# The Muenster link above suggests dividing by assets instead but course staff and all other
+	# sources suggest revenue or sales. Sales are not available in this Compustat data set.
+	dataset$RDIntensity <- dataset$xrdq / dataset$revtq
 
 	# Rearrange columns and drop unnecessary ones.
-	dataset <- subset(dataset, select = c(gvkey,CUSIP,CIK,Ticker,Name,SIC,NAICS,datacqtr,MarketValue,ROA))
+	dataset <- subset(dataset, select = c(gvkey,CUSIP,CIK,Ticker,Name,SIC,NAICS,datacqtr,MarketValue,ROA,RDIntensity))
 	names(dataset)[names(dataset) == 'datacqtr'] <- 'Quarter'
 
 	# Create a temporary column in the main table with the truncated CUSIP identifier that we will have to join on.
@@ -207,11 +213,21 @@ rsvma.load_instdata<- function(dataset)
 	selected_firms_13f_agg$PIH <- 100 * (selected_firms_13f_agg$TotalIH / selected_firms_13f_agg$AvgShrOut)
 	selected_firms_13f_agg <- subset(selected_firms_13f_agg, select = c(CUSIPShort,Quarter,PIH))
 	
-	# Add a 4 period lagged column of the PIH as well.
-	selected_firms_13f_agg <- selected_firms_13f_agg %>% group_by(CUSIPShort) %>% mutate(PIH_lag4 = lag(PIH,4,order_by = Quarter))
-	
 	# Join back to the main table.
 	dataset <- merge( x = dataset, y = selected_firms_13f_agg, by = c("CUSIPShort","Quarter"), all.x = TRUE )
+	
+	# Add 1 and 2 period lagged PIH and control variables.
+	dataset <- dataset %>% group_by(CUSIPShort) %>% mutate(PIH_lag1 = lag(PIH,1,order_by = Quarter),
+	                                                       MarketValue_lag1 = lag(MarketValue,1,order_by = Quarter),
+	                                                       ROA_lag1 = lag(ROA,1,order_by = Quarter),
+	                                                       RDIntensity_lag1 = lag(RDIntensity,1,order_by = Quarter),
+	                                                       AcquisitionTotalValue_lag1 = lag(AcquisitionTotalValue,1,order_by = Quarter))
+	
+	dataset <- dataset %>% group_by(CUSIPShort) %>% mutate(PIH_lag2 = lag(PIH,2,order_by = Quarter),
+	                                                       MarketValue_lag2 = lag(MarketValue,2,order_by = Quarter),
+	                                                       ROA_lag2 = lag(ROA,2,order_by = Quarter),
+	                                                       RDIntensity_lag2 = lag(RDIntensity,2,order_by = Quarter),
+	                                                       AcquisitionTotalValue_lag2 = lag(AcquisitionTotalValue,2,order_by = Quarter))
 	
 	dataset
 }
