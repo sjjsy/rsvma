@@ -80,7 +80,7 @@ rsvma.load_fundamentals <- function(dataset)
 	"Data Date - Date range 2005-01 - 2015-12",
 	"GVKEY, upload a plain text file - ../data/selected_dump_gvkey.txt (automatically created by previous step)",
 	"Selected: CSHOQ (Common Shares Outstanding), PRCCQ (Price Close - Quarter), NIQ (Net Income), ATQ (Total Assets),",
-  "          XRDQ (R&D Expense), REVTQ (Total Revenue)",
+  "          ACTQ (Current Assets), LCTQ (Current Liabilities), XRDQ (R&D Expense), REVTQ (Total Revenue)",
 	"Output .csv, compression type .zip, date format YYMMDDn8",
 	"Filename: ../data/compustat_selected_fundamentals.csv\n", sep = '\n' )
 	cat(msg)
@@ -89,6 +89,15 @@ rsvma.load_fundamentals <- function(dataset)
 
 	# Join the two tables.
 	dataset <- merge(dataset, selected_firms_fundamentals, by = "gvkey")
+	
+	# Rename column.
+	names(dataset)[names(dataset) == 'datacqtr'] <- 'Quarter'
+	
+	# Create a temporary column in the main table with the truncated CUSIP identifier that we will have to join on.
+	dataset$CUSIPShort <- substr(dataset$CUSIP, 0, 6)
+	
+	# Truncate SIC to first 3 digits (industry group).
+	dataset$SIC3 <- substr(dataset$SIC, 0, 3)
 	
 	# Compute market value as price at end of quarter times shares outstanding (units $M).
 	# I have verified that this number is exactly the same as Compustat's MKTVALQ in 
@@ -99,17 +108,28 @@ rsvma.load_fundamentals <- function(dataset)
 	# WRDS Ref: https://www.wiwi.uni-muenster.de/uf/sites/uf/files/2017_10_12_wrds_data_items.pdf
 	dataset$ROA <- dataset$niq / dataset$atq
 	
+	# Compute unabsorbed slack as Current Assets / Current Liabilities.
+	# Ref: Iyer & Miller (2008).
+	dataset$Slack <- dataset$actq / dataset$lctq
+	
 	# Compute R&D intensity as R&D Expense / Total Revenue.
 	# The Muenster link above suggests dividing by assets instead but course staff and all other
 	# sources suggest revenue or sales. Sales are not available in this Compustat data set.
 	dataset$RDIntensity <- dataset$xrdq / dataset$revtq
+	
+	# Calculate the industry averages for ROA and Slack.
+	industry_avgs <- aggregate(subset(dataset,select=c(ROA,Slack)), list(SIC3=dataset$SIC3,Quarter=dataset$Quarter), mean)
+	names(industry_avgs)[names(industry_avgs) == 'ROA'] <- 'ROA_IndAvg'
+	names(industry_avgs)[names(industry_avgs) == 'Slack'] <- 'Slack_IndAvg'
+	dataset <- merge( x = dataset, y = industry_avgs, by = c("SIC3","Quarter"), all.x = TRUE )
+	
+	# Create columns for relative ROA and Slack.
+	dataset$ROA_Rel <- dataset$ROA / dataset$ROA_IndAvg
+	dataset$Slack_Rel <- dataset$Slack / dataset$Slack_IndAvg
 
 	# Rearrange columns and drop unnecessary ones.
-	dataset <- subset(dataset, select = c(gvkey,CUSIP,CIK,Ticker,Name,SIC,NAICS,datacqtr,MarketValue,ROA,RDIntensity))
-	names(dataset)[names(dataset) == 'datacqtr'] <- 'Quarter'
-
-	# Create a temporary column in the main table with the truncated CUSIP identifier that we will have to join on.
-	dataset$CUSIPShort <- substr(dataset$CUSIP, 0, 6)
+	dataset <- subset(dataset, select = c(gvkey,CUSIP,CUSIPShort,CIK,Ticker,Name,SIC,SIC3,NAICS,Quarter,MarketValue,
+	                                      ROA,ROA_IndAvg,ROA_Rel,Slack,Slack_IndAvg,Slack_Rel,RDIntensity))
 	
 	dataset
 }
@@ -219,13 +239,15 @@ rsvma.load_instdata<- function(dataset)
 	# Add 1 and 2 period lagged PIH and control variables.
 	dataset <- dataset %>% group_by(CUSIPShort) %>% mutate(PIH_lag1 = lag(PIH,1,order_by = Quarter),
 	                                                       MarketValue_lag1 = lag(MarketValue,1,order_by = Quarter),
-	                                                       ROA_lag1 = lag(ROA,1,order_by = Quarter),
+	                                                       ROARel_lag1 = lag(ROA_Rel,1,order_by = Quarter),
+	                                                       SlackRel_lag1 = lag(Slack_Rel,1,order_by = Quarter),
 	                                                       RDIntensity_lag1 = lag(RDIntensity,1,order_by = Quarter),
 	                                                       AcquisitionTotalValue_lag1 = lag(AcquisitionTotalValue,1,order_by = Quarter))
 	
 	dataset <- dataset %>% group_by(CUSIPShort) %>% mutate(PIH_lag2 = lag(PIH,2,order_by = Quarter),
 	                                                       MarketValue_lag2 = lag(MarketValue,2,order_by = Quarter),
-	                                                       ROA_lag2 = lag(ROA,2,order_by = Quarter),
+	                                                       ROARel_lag2 = lag(ROA_Rel,2,order_by = Quarter),
+	                                                       SlackRel_lag2 = lag(Slack_Rel,2,order_by = Quarter),
 	                                                       RDIntensity_lag2 = lag(RDIntensity,2,order_by = Quarter),
 	                                                       AcquisitionTotalValue_lag2 = lag(AcquisitionTotalValue,2,order_by = Quarter))
 	
