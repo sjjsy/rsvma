@@ -1,4 +1,4 @@
-#### Exploratory data analysis
+#### Exploratory data analysis on the M&A dataset
 
 ### Read the data
 
