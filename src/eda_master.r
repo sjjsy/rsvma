@@ -1,7 +1,7 @@
 #### Exploratory data analysis on the master dataset
 
 # This file includes all the quantitative analysis that was done to explore
-# issues and support our main analysis.
+# issues, support our main analysis and explore alternative analyses.
 
 ### Read the data
 
@@ -25,6 +25,7 @@ df$Year <- as.integer(substring(df$Quarter, 0, 4))
 
 # Handle some categorical variables
 # Note: not all categorical variables are needed in this analysis
+df$Name <- factor(df$Name)
 df$CUSIPShort <- factor(df$CUSIPShort)
 df$Quarter <- factor(df$Quarter)
 df$SIC3 <- factor(df$SIC3)
