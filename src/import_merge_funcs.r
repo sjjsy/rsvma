@@ -253,4 +253,24 @@ rsvma.load_instdata<- function(dataset)
 	
 	dataset
 }
+
+##########################################################
+# Manual additions (currently only founding year).
+##########################################################
+rsvma.load_manualadditions<- function(dataset)
+{
+  msg <- paste("Manually acquired founding years for target firms",
+               "Filename: ../data/founding_years.csv\n", sep = '\n' )
+  cat(msg)
+  readline( prompt="Place the data at the specified location and press enter to continue... ")
+  founding_years <- read.csv("../data/founding_years.csv")
+  
+  # Join back to the main table.
+  dataset <- merge( x = dataset, y = founding_years, by = c("CUSIPShort"), all.x = TRUE )
+  
+  current_year <- as.numeric( format( Sys.Date(), "%Y" ) )
+  dataset$FirmAge <- current_year - as.numeric( dataset$YearFounded )
+  
+  dataset
+}
 	
