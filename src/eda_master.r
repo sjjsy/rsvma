@@ -56,8 +56,9 @@ df$PIHC <- cut(df$PIH, c(0,2,5,10,20,100))
 # following in the given order
 df <- subset(df, select=c(
   X, SIC3, Name, Year,
+  FirmAge,
   MarketValueC, MarketValue, MarketValue_lag1, MarketValue_lag2,
-  RDIntensityC, RDIntensity, RDIntensity_lag1, RDIntensity_lag2,
+  #RDIntensityC, RDIntensity, RDIntensity_lag1, RDIntensity_lag2,
   ROARC, ROA_Rel, ROARel_lag1, ROARel_lag2,
   SlackRC, Slack_Rel, SlackRel_lag1, SlackRel_lag2,
   PIHC, PIH, PIH_lag1, PIH_lag2,
@@ -66,28 +67,47 @@ df <- subset(df, select=c(
 # Inspect
 View(df)
 
-# Eliminate rows with any missing values
+## Eliminate rows with any missing values and report the loss of data in terms
+# of firms and firm-quarters
+# Store the firms present
+names.before <- unique(df$Name)
+# Eliminate the rows
 df <- df[complete.cases(df),]
-View(df)
+# Compare to the firms after
+names.after <- unique(df$Name)
+firms.lost <- setdiff(names.before, names.after)
+cat(sprintf("We lost %.0f%% of the firms due to missing data (%.0f -> %.0f)!", 100*length(firms.lost)/length(names.before), length(names.before), length(names.after)))
+cat(sprintf("In terms of firm-quarter observations the loss was from %.0f to %.0f.", nrow(csv), nrow(df)))
+cat(sprintf("The following %.0f firms were lost: %s.", length(firms.lost), paste(as.character(firms.lost), collapse=", ")))
+# Notes on data loss
+#   obs.  firms  data
+#   2156     49  full data
+#   1845     48  eliminated with FA, MV,      ROA,        PIH
+#   1502     37  eliminated with FA, MV,      ROA, Slack, PIH -- ALLSTATE CORP, AMERICAN EXPRESS CO, BANK OF AMERICA CORP, CITIGROUP INC, FORD MOTOR CO, GENERAL ELECTRIC CO, GOLDMAN SACHS GROUP INC, JPMORGAN CHASE & CO, MORGAN STANLEY, U S BANCORP, WELLS FARGO & CO, MEDTRONIC PLC.
+#    807     20  eliminated with FA, MV, RDI, ROA, Slack, PIH
 
-# Compute the numbers of data points in terms of firm-quarters and firms
-no <- nrow(df) # --> 807
-no
-# In round 1, this was 1845 which means that there were 311 rows with missing
-# values (2156-1845=311) but now with R&D intensity it drops to 807 -- ie.
-# 1349 rows with missing values (only 37% of dataset available)
-nf <- length(unique(csv$CUSIP)) # --> 49
-nf
-nf <- length(unique(df$Name)) # --> In round 1 it was 48, now 20
-nf
+# Inspect
+View(df)
 
 # Define a short string to describe the dataset to facilitate comparison of
 # figures and other analysis output
-data_desc <- sprintf('%dx%d_unpruned', nf, no)
-
+data_desc <- sprintf('%dx%d', nf, no)
 outfilepath <- function(name, suffix) {
-  sprintf('../out/%s__%s.%s', name, data_desc, suffix)
+  sprintf('../out/eda__%s__%s.%s', name, data_desc, suffix)
 }
+
+## Make another dataset that just has the 
+# Aggregate data frame by Name returning means
+# for numeric variables FIXME TODO
+dfa <- subset(df, Year == "2005" | Year == "2006", c(Name, MarketValue, ROA_Rel, Slack_Rel, PIH, AcquisitionCount))
+dfa <- aggregate(dfa, by=list(dfa$Name), FUN=mean, na.rm=TRUE)
+rownames(dfa) <- dfa$Group.1
+dfa <- dfa[-c(1:2)]
+#colnames(df) <- c("FAge", "MktV", "ROAR", "SlaR", "PIH", "AcqC")
+#dfb <- subset(df, Year == "2014" | Year == "2015")
+View(dfa)
+#plot(dfa$MarketValue_lag1)
+
 
 ### Produce views to the distribution of some variables
 # Histograms of market value, ROA, PIH & acquisition count
@@ -177,7 +197,12 @@ plot(df$PIH_lag1, df$AcquisitionCount, xlab="PIH one quarter ago", ylab="Quarter
 plot(df$PIH_lag2, df$AcquisitionCount, xlab="PIH two quarters ago", ylab="Quarterly acquisition count")
 par(mfrow=c(1,1))
 
-# Compute the correlation between PIH and acquisition count 
+# Plot PIH vs acquisition count
+library(ggplot2)
+ggplot(df, aes(AcquisitionCount, fill = PIHC)) + geom_histogram(binwidth = 1)
++ facet_grid(PIHC ~ ., margins = TRUE, scales = "free")
+
+### Compute the correlation between PIH and acquisition count 
 cor.test(df$PIH_lag1, df$AcquisitionCount, method="pearson")
 cor.test(df$PIH_lag2, df$AcquisitionCount, method="pearson")
 # Note: The argument 'use="complete.obs"' is necessary if data includes
@@ -187,7 +212,7 @@ cor.test(df$PIH_lag2, df$AcquisitionCount, method="pearson")
 #   2Q lag and  807 observations: cor=-0.01992, p=0.5719
 #   1Q lag and  807 observations: cor=-0.02424, p=0.4916
 
-## Generate table of basic statistics
+### Generate table of basic statistics
 stats <- data.frame(apply(df[4:8], 2, min), apply(df[4:8], 2, max), apply(df[4:8], 2, mean), apply(df[4:8], 2, sd))
 row.names(stats) <- c("Year", "MarketValue", "ROA", "RDI", "PIH_lag4", "AcquisitionCount")
 colnames(stats) <- c("Min", "Max", "Mean", "SD")

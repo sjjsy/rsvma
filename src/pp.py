@@ -31,9 +31,10 @@ if cmd == 'pp':
 elif cmd == 'check':
   with open(pf) as fcsv:
     rdr = csv.reader(fcsv, delimiter=';', quotechar='"')
-    for row in rdr:
+    for i, row in enumerate(rdr):
       try:
-        print(len(row))
+        if len(row) != 56:
+          print('Column count mismatch at row %d: %d' % (i, len(row)))
       except IOError as e:
         if e.errno == errno.EPIPE:
           print('Stopped due to broken pipe!')

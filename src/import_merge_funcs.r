@@ -144,7 +144,7 @@ rsvma.load_madata <- function(dataset)
 	cat("Dump Thomson Reuters XLSB data provided during course to CSV\nFilename: ../data/ma_deal_data.csv\n")
 	readline( prompt="Press enter when ready to continue... ")
 	cat("Reading M&A CSV, this might take a couple of minutes...\n")
-	ma_data <- read.csv("../data/ma_deal_data.csv")
+	ma_data <- read.csv("../data/ma_deal_data.csv", sep=';')
 
 	# Filter to only the acquiror CUSIP values that exist in our selected subset.
 	# NOTE: Truncate to the first 6 characters of the the CUSIP since that's as much detail as the M&A data contains.
@@ -152,7 +152,7 @@ rsvma.load_madata <- function(dataset)
 
 	# Filter out deals where the target and acquiror are the same (e.g. stock repurchases).
 	# See X.Deal.Number 1634239020 (TXN, 2005) as an example.
-	ma_data <- ma_data[as.character(ma_data$Acquiror.Ultimate.Parent.CUSIP) != as.character(ma_data$X.Target.Immediate.Parent.CUSIP),]
+	ma_data <- ma_data[as.character(ma_data$Acquiror.Ultimate.Parent.CUSIP) != as.character(ma_data$Target.Immediate.Parent.CUSIP),]
 
 	# Rearrange columns and drop unnecessary ones.
 	ma_data <- subset(ma_data, select = c(Acquiror.Ultimate.Parent.CUSIP,Acquiror.Ultimate.Parent,Date.Announced,Date.Effective,Date.Withdrawn,Status,Value.of.Transaction...mil.,Target.Name,Target.NAIC.Code,Synopsis))
@@ -195,7 +195,7 @@ rsvma.load_instdata<- function(dataset)
 {
 	msg <- paste("WRDS: Thomson Reuters Institutional (13f) Holdings - s34 Master File",
 		"https://wrds-web.wharton.upenn.edu/wrds/ds/tfn/sp34/index.cfm",
-		"Data Date - Date range 2005-01 - 2015-12",
+		"Report Date - Date range 2005-01 - 2015-12",
 		"CUSIP, upload a plain text file - ../data/selected_dump_cusip.txt (automatically created by first step)",
 		"Selected: MGRNAME TYPECODE FDATE RDATE CUSIP SHARES NO SHARED SOLE CHANGE PRC SHROUT1",
 		"Output .csv, compression type .zip, date format YYMMDDn8",
