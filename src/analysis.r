@@ -19,7 +19,7 @@ rsvma.perform_analysis <- function()
     sprintf('../out/dev__%s__%s.%s', name, data_desc, suffix)
   }
   ## Generate table of basic statistics
-  stats <- rsvma.compute_descriptive_stats(subset(df, select=c("FirmAge", "MarketValue", "ROA_Rel", "Slack_Rel", "PIH", "AcquisitionCount")), outfilepath)
+  stats <- rsvma.compute_descriptive_stats(subset(df, select=c("FirmAge", "MarketValue", "ROA_Rel", "PIH", "AcquisitionCount")), outfilepath)
   ## Form and analyze the different linear models
   rsvma.run_primary_lms(df, outfilepath)
   ## Form and analyze the different negative binomial models
